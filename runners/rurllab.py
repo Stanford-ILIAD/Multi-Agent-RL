@@ -118,7 +118,7 @@ def rllab_envpolicy_parser(env, args):
                             for agid in range(len(env.agents))
                         ]
                     policy = GaussianLSTMPolicy(env_spec=env.spec, feature_network=feature_network,
-                                                hidden_dim=int(args.policy_hidden), name='policy')
+                                                hidden_dim=int(args.policy_hidden[0]), name='policy')
                 elif isinstance(env.spec.action_space, Discrete):
                     if args.control == 'concurrent':
                         policies = [
