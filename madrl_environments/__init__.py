@@ -1,6 +1,6 @@
 from rltools.util import EzPickle, stack_dict_list
 from gym import spaces, error
-from gym.monitoring.video_recorder import ImageEncoder
+from gym.wrappers.monitoring.video_recorder import ImageEncoder
 import numpy as np
 import time
 import scipy
