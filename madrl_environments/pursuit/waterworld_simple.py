@@ -9,13 +9,25 @@ from rltools.util import EzPickle
 
 class Archea(Agent):
 
-    def __init__(self, idx, radius):
+    def __init__(self, idx, radius, _n_sensors, sensor_range, speed_features=True):
         self._idx = idx
         self._radius = radius
         # Number of observation coordinates from each sensor
-        self._obs_dim =  16
         self._position = None
         self._velocity = None
+        self._n_sensors = _n_sensors
+        self._sensor_range = sensor_range
+        # Number of observation coordinates from each sensor
+        self._sensor_obscoord = 3
+        if speed_features:
+            self._sensor_obscoord += 1
+        self._obscoord_from_sensors = self._n_sensors * self._sensor_obscoord
+        self._obs_dim = self._obscoord_from_sensors + 1  #+ 1  #2 for type, 1 for id
+
+        # Sensors
+        angles_K = np.linspace(0., 2. * np.pi, self._n_sensors + 1)[:-1]
+        sensor_vecs_K_2 = np.c_[np.cos(angles_K), np.sin(angles_K)]
+        self._sensors = sensor_vecs_K_2
         # Sensors
         # angles_K = np.linspace(0., 2. * np.pi, self._n_sensors + 1)[:-1]
         # sensor_vecs_K_2 = np.c_[np.cos(angles_K), np.sin(angles_K)]
@@ -52,21 +64,33 @@ class Archea(Agent):
         assert self._sensors is not None
         return self._sensors
 
-    def sensed(self, objx_N_2, same=False):
+    def sensed(self, obj_pos, obj_vel, obj_rad, speed=False, same=False):
         """Whether `obj` would be sensed by the pursuers"""
-        relpos_obj_N_2 = objx_N_2 - np.expand_dims(self.position, 0)
-        sensorvals_K_N = self.sensors.dot(relpos_obj_N_2.T)
-        sensorvals_K_N[(sensorvals_K_N < 0) | (sensorvals_K_N > self._sensor_range) | ((
-            relpos_obj_N_2**2).sum(axis=1)[None, :] - sensorvals_K_N**2 > self._radius**2)] = np.inf
+        relpos_obj = obj_pos - np.expand_dims(self.position, 0) 
+        reldist = np.linalg.norm(relpos_obj)
+        relpos_obj = relpos_obj * (1 - obj_rad/reldist)
+        sensorvals = self.sensors.dot(relpos_obj.T)
+        sensorvals[(sensorvals< 0) | (sensorvals > self._sensor_range) | ((
+            relpos_obj**2).sum(axis=1)[None, :] - sensorvals**2 > self._radius**2)] = np.inf
         if same:
-            sensorvals_K_N[:, self._idx - 1] = np.inf
-        return sensorvals_K_N
+            sensorvals[:, self._idx - 1] = np.inf
+        sensedmask = np.isfinite(np.array(sensorvals))
+        sensed_distfeatures = np.zeros((self._n_sensors,1))
+        sensed_distfeatures[sensedmask] = sensorvals[sensedmask]
+        if speed:
+            relvel = obj_vel - np.expand_dims(self.velocity, 0)
+            sensorvals = self.sensors.dot(relvel.T)
+            sensed_speedfeatures = np.zeros((self._n_sensors,1))
+            sensed_speedfeatures[sensedmask] = sensorvals[sensedmask]
+            return sensed_distfeatures, sensed_speedfeatures
 
+        return sensed_distfeatures
 
 class WaterWorld(AbstractMAEnv, EzPickle):
 
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]), ev_speed=0.01, 
-                 action_scale=0.01,food_reward=1., encounter_reward=.05, control_penalty= -5, speed_features=True, **kwargs):
+                  n_sensors = 30, sensor_range=0.2, action_scale=0.01,food_reward=10, 
+                  encounter_reward=.05, control_penalty= -5, speed_features=True, **kwargs):
         EzPickle.__init__(self, radius, obstacle_radius,
                           obstacle_loc, ev_speed,
                           action_scale, food_reward, encounter_reward,
@@ -75,6 +99,8 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self.obstacle_radius = obstacle_radius
         self.obstacle_loc = obstacle_loc
         self.ev_speed = ev_speed
+        self.n_sensors = n_sensors
+        self.sensor_range = np.ones(1) * sensor_range
         self.radius = radius
         self.action_scale = action_scale
         self.food_reward = food_reward
@@ -83,9 +109,9 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self.n_obstacles = 1
         self._speed_features = speed_features
         self.seed()
-        self._pursuer = Archea(1, self.radius * 2) 
-        self._evader  = Archea(1, self.radius)
-        self._food  = Archea(1, self.radius * 0.75)
+        self._pursuer = Archea(1, self.radius, self.n_sensors, self.sensor_range, speed_features=True) 
+        self._evader  = Archea(1, self.radius, self.n_sensors, self.sensor_range,speed_features=True)
+        self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, speed_features=True)
         self._pursuers = [self._pursuer]
 
     @property
@@ -154,24 +180,41 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         #         vel = -1 * self._evader.velocity
         D = 0.1
         E = 0.05
-        
+        ev_speed = 1
         evfromobst = ssd.euclidean(self._evader.position, self.obstaclesx_No_2)
         evfromfood = ssd.euclidean(self._food.position, self._evader.position)
         foodfromobst = ssd.euclidean(self._food.position, self.obstaclesx_No_2)
-        vel = ((self._food.position - self._evader.position)/evfromfood) * self.action_scale 
+        vel = ((self._food.position - self._evader.position)/evfromfood) * self.action_scale
         is_colliding_evader = evfromobst <= self._evader._radius + self.obstacle_radius
         if evfromobst < self._evader._radius + self.obstacle_radius + E and evfromfood > foodfromobst:
             vel = self._evader.velocity
             rel_dis = (self._evader.position - self.obstaclesx_No_2)/evfromobst
-            vel[0] = rel_dis[1] * self.action_scale 
+            vel[0] = rel_dis[1] * self.action_scale
             vel[1] = -rel_dis[0] * self.action_scale 
 
         rel_pursuer = self._pursuer.position - self._evader.position
         evfrompur = ssd.euclidean(self._pursuer.position, self._evader.position)
         if np.linalg.norm(rel_pursuer) < D and np.linalg.norm(rel_pursuer) > 0.01:
-            vel = self._evader.velocity - (rel_pursuer/evfrompur) * self.action_scale
-
+            vel = self._evader.velocity - (rel_pursuer/evfrompur) * self.action_scale 
         return vel
+
+    def get_partial_observation(self):
+        sensed_obdistfeatures = self._pursuer.sensed(self.obstaclesx_No_2,0,self.obstacle_radius,speed=False)
+        sensed_evdistfeatures, sensed_evvelfeatures = self._pursuer.sensed(self._evader.position,self._evader.velocity,self._evader._radius,speed=True)
+        sensed_fooddistfeatures = self._pursuer.sensed(self._food.position,0,self._food._radius,speed=False)
+        if self._speed_features:
+            sensor_features = np.c_[sensed_obdistfeatures, sensed_evdistfeatures, sensed_fooddistfeatures,sensed_evvelfeatures]
+        else:
+            sensor_features = np.c_[sensed_obdistfeatures, sensed_evdistfeatures, sensed_fooddistfeatures]
+        sensor_features = sensor_features.ravel()
+        pursuerfromev = ssd.euclidean(self._pursuer.position,self._evader.position)
+        is_colliding_ev_pursuer = pursuerfromev <= self._pursuer._radius + self._evader._radius
+        obs = np.append(sensor_features, is_colliding_ev_pursuer)  
+        # print np.shape(obs)
+        obslist = []
+        obslist.append(obs)
+        return obslist
+
 
     def get_full_observation(self):
         pursuers_pos = np.array(self._pursuer.position)
@@ -263,7 +306,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             self._evader.set_position(self._respawn(self._evader.position, self._evader._radius))
 
         # Update reward based on these collisions 
-        obslist = self.get_full_observation()
+        obslist = self.get_partial_observation()
         # print self._pursuer.observation_space.shape
         self._timesteps += 1
         done = self.is_terminal
@@ -282,10 +325,20 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         cv2.circle(img,
                    tuple((self.obstaclesx_No_2 * screen_size).astype(int)),
                    int(self.obstacle_radius * screen_size), color, -1, lineType=cv2.LINE_AA)
-        # Pursuer
-        cv2.circle(img,
-                  tuple((self._pursuer.position * screen_size).astype(int)),
-                  int(self._pursuer._radius * screen_size), (255, 0, 0), -1, lineType=cv2.LINE_AA)
+        
+        for k in range(self._pursuer._n_sensors):
+            color = (0, 0, 0)
+            cv2.line(img,
+                     tuple((self._pursuer.position * screen_size).astype(int)),
+                     tuple(((self._pursuer.position + self._pursuer._sensor_range * self._pursuer.sensors[k]) *
+                            screen_size).astype(int)), color, 1, lineType=cv2.LINE_AA)
+            cv2.circle(img,
+                       tuple((self._pursuer.position * screen_size).astype(int)),
+                       int(self._pursuer._radius * screen_size), (255, 0, 0), -1, lineType=cv2.LINE_AA)
+        # # Pursuer
+        # cv2.circle(img,
+        #           tuple((self._pursuer.position * screen_size).astype(int)),
+        #           int(self._pursuer._radius * screen_size), (255, 0, 0), -1, lineType=cv2.LINE_AA)
         # Evader
         color = (0, 255, 0)
         cv2.circle(img,
@@ -311,6 +364,7 @@ if __name__ == '__main__':
     obs = env.reset()
     while True:
         obs, rew, _, _ = env.step(env.np_random.randn(2) * .01)
+        print(obs)
         # print obs
         if rew.sum() > 0:
             print(rew)
