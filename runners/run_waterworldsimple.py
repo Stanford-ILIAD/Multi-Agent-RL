@@ -14,8 +14,10 @@ from madrl_environments import StandardizedEnv, ObservationBuffer
 ENV_OPTIONS = [
     ('radius', float, 0.015, 'Radius of agents'),
     ('food_reward', float, 10, ''),
-    ('control_penalty', float, -0.5, ''),
+    ('control_penalty', float, 0, ''),
     ('buffer_size', int, 1, ''),
+    ('full_observability',bool, False, 'observability'),
+    ('evader_params',list, [0.1, 0.05], 'evader params'),
     ('curriculum', str, None, ''),
 ]
 # yapf: enable
@@ -23,7 +25,11 @@ ENV_OPTIONS = [
 def main(parser):
     mode = parser._mode
     args = parser.args
-    env = WaterWorld(radius=args.radius, food_reward=args.food_reward, control_penalty=args.control_penalty)
+    env = WaterWorld(radius=args.radius, 
+        food_reward=args.food_reward, 
+        control_penalty=args.control_penalty,
+        is_observability_full=args.full_observability,
+        evader_params = args.evader_params)
     if args.buffer_size > 1:
         env = ObservationBuffer(env, args.buffer_size)
 
