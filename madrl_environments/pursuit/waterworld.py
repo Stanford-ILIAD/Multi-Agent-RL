@@ -308,10 +308,10 @@ class MAWaterWorld(AbstractMAEnv, EzPickle):
         sensorvals_Np_K_Np = np.array(
             [pursuer.sensed(pursuersx_Np_2, same=True) for pursuer in self._pursuers])
 
-        # print np.shape(sensorvals_Np_K_No)
+        print(np.shape(sensorvals_Np_K_No))
         # dist features
         closest_ob_idx_Np_K = np.argmin(sensorvals_Np_K_No, axis=2)
-        # print np.shape(closest_ob_idx_Np_K)
+        print(np.shape(closest_ob_idx_Np_K))
         closest_ob_dist_Np_K = self._closest_dist(closest_ob_idx_Np_K, sensorvals_Np_K_No)
         sensedmask_ob_Np_K = np.isfinite(closest_ob_dist_Np_K)
         # print sensedmask_ob_Np_K
@@ -487,6 +487,7 @@ if __name__ == '__main__':
     obs = env.reset()
     while True:
         obs, rew, _, _ = env.step(env.np_random.randn(10) * .5)
+        print(obs)
         if rew.sum() > 0:
             print(rew)
         env.render()

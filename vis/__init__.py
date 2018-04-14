@@ -167,6 +167,7 @@ class Visualizer(PolicyLoad):
 
                 data = joblib.load(filename)
                 policy = data['policy']
+                policy.reset()
                 if self.control == 'centralized':
                     path = cent_rollout(self.env, policy, max_path_length=self.max_traj_len,
                                         animated=True)

@@ -22,7 +22,7 @@ class Archea(Agent):
         if speed_features:
             self._sensor_obscoord += 1
         self._obscoord_from_sensors = self._n_sensors * self._sensor_obscoord
-        self._obs_dim = self._obscoord_from_sensors + 1  #+ 1  #2 for type, 1 for id
+        self._obs_dim = int(self._obscoord_from_sensors + 1)  #+ 1  #2 for type, 1 for id
 
         # Sensors
         angles_K = np.linspace(0., 2. * np.pi, self._n_sensors + 1)[:-1]
@@ -67,16 +67,21 @@ class Archea(Agent):
     def sensed(self, obj_pos, obj_vel, obj_rad, speed=False, same=False):
         """Whether `obj` would be sensed by the pursuers"""
         relpos_obj = obj_pos - np.expand_dims(self.position, 0) 
-        reldist = np.linalg.norm(relpos_obj)
-        relpos_obj = relpos_obj * (1 - obj_rad/reldist)
+        # reldist = np.linalg.norm(relpos_obj)
+        # relpos_obj = relpos_obj * (1 - obj_rad/reldist)
         sensorvals = self.sensors.dot(relpos_obj.T)
         sensorvals[(sensorvals< 0) | (sensorvals > self._sensor_range) | ((
             relpos_obj**2).sum(axis=1)[None, :] - sensorvals**2 > self._radius**2)] = np.inf
         if same:
             sensorvals[:, self._idx - 1] = np.inf
+
+
         sensedmask = np.isfinite(np.array(sensorvals))
         sensed_distfeatures = np.zeros((self._n_sensors,1))
         sensed_distfeatures[sensedmask] = sensorvals[sensedmask]
+        # for i in sensed_distfeatures:
+        #     if i > 0:
+        #         print(i, np.linalg.norm(relpos_obj))
         if speed:
             relvel = obj_vel - np.expand_dims(self.velocity, 0)
             sensorvals = self.sensors.dot(relvel.T)
@@ -89,8 +94,9 @@ class Archea(Agent):
 class WaterWorld(AbstractMAEnv, EzPickle):
 
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]), ev_speed=0.01, 
-                  n_sensors = 30, sensor_range=0.2, action_scale=0.01,food_reward=10, 
-                  encounter_reward=.05, control_penalty= -5, speed_features=True, **kwargs):
+                  n_sensors = 30, sensor_range=2, action_scale=0.01,food_reward=10, 
+                  encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.1,0.05]), 
+                  speed_features=True, is_observability_full = False, **kwargs):
         EzPickle.__init__(self, radius, obstacle_radius,
                           obstacle_loc, ev_speed,
                           action_scale, food_reward, encounter_reward,
@@ -113,6 +119,8 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self._evader  = Archea(1, self.radius, self.n_sensors, self.sensor_range,speed_features=True)
         self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, speed_features=True)
         self._pursuers = [self._pursuer]
+        self.evader_params = evader_params
+        self.is_observability_full = is_observability_full
 
     @property
     def reward_mech(self):
@@ -176,17 +184,13 @@ class WaterWorld(AbstractMAEnv, EzPickle):
     def get_evaders_velocity(self):
 
 
-        # if any(self._evader.position != np.clip(self._evader.position, 0, 1)):
-        #         vel = -1 * self._evader.velocity
-        D = 0.1
-        E = 0.05
         ev_speed = 1
         evfromobst = ssd.euclidean(self._evader.position, self.obstaclesx_No_2)
         evfromfood = ssd.euclidean(self._food.position, self._evader.position)
         foodfromobst = ssd.euclidean(self._food.position, self.obstaclesx_No_2)
         vel = ((self._food.position - self._evader.position)/evfromfood) * self.action_scale
         is_colliding_evader = evfromobst <= self._evader._radius + self.obstacle_radius
-        if evfromobst < self._evader._radius + self.obstacle_radius + E and evfromfood > foodfromobst:
+        if evfromobst < self._evader._radius + self.obstacle_radius + self.evader_params[1] and evfromfood > foodfromobst:
             vel = self._evader.velocity
             rel_dis = (self._evader.position - self.obstaclesx_No_2)/evfromobst
             vel[0] = rel_dis[1] * self.action_scale
@@ -194,7 +198,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
 
         rel_pursuer = self._pursuer.position - self._evader.position
         evfrompur = ssd.euclidean(self._pursuer.position, self._evader.position)
-        if np.linalg.norm(rel_pursuer) < D and np.linalg.norm(rel_pursuer) > 0.01:
+        if np.linalg.norm(rel_pursuer) < self.evader_params[0] and np.linalg.norm(rel_pursuer) > 0.01:
             vel = self._evader.velocity - (rel_pursuer/evfrompur) * self.action_scale 
         return vel
 
@@ -306,12 +310,16 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             self._evader.set_position(self._respawn(self._evader.position, self._evader._radius))
 
         # Update reward based on these collisions 
-        obslist = self.get_partial_observation()
+        if self.is_observability_full:
+            obslist = self.get_full_observation()
+        else:
+            obslist = self.get_partial_observation()
         # print self._pursuer.observation_space.shape
         self._timesteps += 1
         done = self.is_terminal
         info = dict(evcaught=evcaught)
         rlist = np.array([reward])
+        # print(rlist,self.control_penalty)
         # print(rlist)
         return obslist, rlist, done, info
 
@@ -364,7 +372,7 @@ if __name__ == '__main__':
     obs = env.reset()
     while True:
         obs, rew, _, _ = env.step(env.np_random.randn(2) * .01)
-        print(obs)
+        # print(obs)
         # print obs
         if rew.sum() > 0:
             print(rew)
