@@ -77,7 +77,10 @@ class Archea(Agent):
 
 
         sensedmask = np.isfinite(np.array(sensorvals))
+        # print("Number of sensors : ", self._n_sensors, self._sensor_range)
+        # print("Number of sensors: ",str())
         sensed_distfeatures = np.zeros((self._n_sensors,1))
+        # print(np.shape(sensed_distfeatures))
         sensed_distfeatures[sensedmask] = sensorvals[sensedmask]
         # for i in sensed_distfeatures:
         #     if i > 0:
@@ -85,23 +88,22 @@ class Archea(Agent):
         if speed:
             relvel = obj_vel - np.expand_dims(self.velocity, 0)
             sensorvals = self.sensors.dot(relvel.T)
-            sensed_speedfeatures = np.zeros((self._n_sensors,1))
+            sensed_speedfeatures = np.zeros((30,1))
             sensed_speedfeatures[sensedmask] = sensorvals[sensedmask]
             return sensed_distfeatures, sensed_speedfeatures
-
+        # print(np.shape(sensed_distfeatures))
         return sensed_distfeatures
 
 class WaterWorld(AbstractMAEnv, EzPickle):
 
-    def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]), ev_speed=0.01, 
-                  n_sensors = 30, sensor_range=2, action_scale=0.01,food_reward=10, 
-                  encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.1,0.05]), 
-                  speed_features=True, is_observability_full = False, **kwargs):
-        EzPickle.__init__(self, radius, obstacle_radius,
-                          obstacle_loc, ev_speed,
-                          action_scale, food_reward, encounter_reward,
-                          control_penalty, speed_features, **kwargs)
-
+    def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]),
+                ev_speed=0.01, n_sensors = 30, sensor_range=2, action_scale=0.01,food_reward=10, 
+                encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.5,0.05]), 
+                speed_features=True, is_observability_full = False, **kwargs):
+        EzPickle.__init__(self, radius, obstacle_radius,obstacle_loc,
+                        ev_speed, n_sensors, sensor_range,action_scale, food_reward, 
+                        encounter_reward, control_penalty, evader_params,
+                        speed_features, is_observability_full, **kwargs)
         self.obstacle_radius = obstacle_radius
         self.obstacle_loc = obstacle_loc
         self.ev_speed = ev_speed
@@ -206,10 +208,16 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         sensed_obdistfeatures = self._pursuer.sensed(self.obstaclesx_No_2,0,self.obstacle_radius,speed=False)
         sensed_evdistfeatures, sensed_evvelfeatures = self._pursuer.sensed(self._evader.position,self._evader.velocity,self._evader._radius,speed=True)
         sensed_fooddistfeatures = self._pursuer.sensed(self._food.position,0,self._food._radius,speed=False)
+        
+        # print("Collected sensed features")
+        # print(np.shape(sensed_obdistfeatures), np.shape(sensed_evdistfeatures), np.shape(sensed_fooddistfeatures),np.shape(sensed_evvelfeatures))
         if self._speed_features:
+            # print("Concatenating features 1")
             sensor_features = np.c_[sensed_obdistfeatures, sensed_evdistfeatures, sensed_fooddistfeatures,sensed_evvelfeatures]
         else:
+            # print("Concatenating features")
             sensor_features = np.c_[sensed_obdistfeatures, sensed_evdistfeatures, sensed_fooddistfeatures]
+        # print("Ob dist features: ",np.shape(sensed_obdistfeatures),  np.shape(sensor_features))
         sensor_features = sensor_features.ravel()
         pursuerfromev = ssd.euclidean(self._pursuer.position,self._evader.position)
         is_colliding_ev_pursuer = pursuerfromev <= self._pursuer._radius + self._evader._radius
@@ -217,6 +225,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         # print np.shape(obs)
         obslist = []
         obslist.append(obs)
+        # print("Shape of observation: ",np.shape(obs), np.shape(sensor_features))
         return obslist
 
 
@@ -241,7 +250,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         return obslist
 
     def step(self, action):
- 
+
         action = np.asarray(action)
         action = action.reshape(2)
         action = action * self.action_scale
@@ -262,7 +271,6 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             self._pursuer.set_velocity(-1 * self._pursuer.velocity)
         else:
             self._pursuer.set_position(probable_position)
-
         # Pursuer stop on hitting a wall
         clippedx_2 = np.clip(self._pursuer.position, 0, 1)
         vel_2 = self._pursuer.velocity
@@ -297,7 +305,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         if is_colliding_food:
             self._food.set_position(self.np_random.rand(2))
             self._food.set_position(self._respawn(self._food.position, self._food._radius))    
-                
+
         # Find collisions
         # Evaders
         pursuerfromev = ssd.euclidean(self._pursuer.position,self._evader.position)
@@ -308,7 +316,6 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             reward += self.food_reward
             self._evader.set_position(self.np_random.rand(2))
             self._evader.set_position(self._respawn(self._evader.position, self._evader._radius))
-
         # Update reward based on these collisions 
         if self.is_observability_full:
             obslist = self.get_full_observation()
@@ -319,6 +326,8 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         done = self.is_terminal
         info = dict(evcaught=evcaught)
         rlist = np.array([reward])
+
+        # print(obslist, rlist, done, info)
         # print(rlist,self.control_penalty)
         # print(rlist)
         return obslist, rlist, done, info
