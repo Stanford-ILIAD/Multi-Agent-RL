@@ -98,7 +98,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
 
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]),
                 ev_speed=0.01, n_sensors = 30, sensor_range=2, action_scale=0.01,food_reward=10, 
-                encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.5,0.05]), 
+                encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.1,0.05]), 
                 speed_features=True, is_observability_full = False, **kwargs):
         EzPickle.__init__(self, radius, obstacle_radius,obstacle_loc,
                         ev_speed, n_sensors, sensor_range,action_scale, food_reward, 
@@ -123,6 +123,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self._pursuers = [self._pursuer]
         self.evader_params = evader_params
         self.is_observability_full = is_observability_full
+        self._evader_move = False
 
     @property
     def reward_mech(self):
@@ -200,8 +201,18 @@ class WaterWorld(AbstractMAEnv, EzPickle):
 
         rel_pursuer = self._pursuer.position - self._evader.position
         evfrompur = ssd.euclidean(self._pursuer.position, self._evader.position)
-        if np.linalg.norm(rel_pursuer) < self.evader_params[0] and np.linalg.norm(rel_pursuer) > 0.01:
-            vel = self._evader.velocity - (rel_pursuer/evfrompur) * self.action_scale 
+        next_time_step_disp = (self._pursuer.position - self._evader.position).dot(self._pursuer.velocity - self._evader.velocity)
+        final_evfrompur = evfrompur + next_time_step_disp
+        # print(self.evader_params[0])
+        # print(evfrompur)
+        if self._evader_move or (evfrompur < self.evader_params[0] and evfrompur > 0.01):
+            # print("HAYAY",evfrompur)
+            self._evader_move = True
+            # print("Running away from pursuer")
+            vel = - (rel_pursuer/evfrompur) * self.action_scale
+        if evfrompur > 2 * self.evader_params[0]:
+            # print("Pursuer away!!")
+            self._evader_move = False
         return vel
 
     def get_partial_observation(self):
@@ -278,10 +289,17 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self._pursuer.set_velocity(vel_2)
         self._pursuer.set_position(clippedx_2)   
 
+
         self._evader.set_velocity(self.get_evaders_velocity())
         probable_position_ev = self._evader.position + self._evader.velocity
+        clippedx_2 = np.clip(probable_position_ev, 0, 1)
+        vel_2 = self._evader.velocity
+        vel_2[self._evader.position != clippedx_2] = 0
+        self._evader.set_velocity(vel_2)
+        self._evader.set_position(clippedx_2)
+        
         # Bounce evader on hitting an obstacle
-        evfromobst = ssd.euclidean(probable_position_ev, self.obstaclesx_No_2)
+        evfromobst = ssd.euclidean(self._evader.position, self.obstaclesx_No_2)
         is_colliding_evader = evfromobst <= self._evader._radius + self.obstacle_radius
         if is_colliding_evader:
             # print("Collision")
@@ -292,12 +310,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         else:
             self._evader.set_position(probable_position_ev)
 
-        clippedx_2 = np.clip(self._evader.position, 0, 1)
-        vel_2 = self._evader.velocity
-        vel_2[self._evader.position != clippedx_2] = 0
-        self._evader.set_velocity(vel_2)
-        self._evader.set_position(clippedx_2)
-
+        
         # print(self._evader.velocity,self._evader.position, self._food.position)
         # check if evader caught its food
         evfromfood = ssd.euclidean(self._evader.position, self._food.position)
