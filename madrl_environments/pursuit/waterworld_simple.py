@@ -99,11 +99,11 @@ class WaterWorld(AbstractMAEnv, EzPickle):
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]),
                 ev_speed=0.01, n_sensors = 30, sensor_range=2, action_scale=0.01,food_reward=10, 
                 encounter_reward=.05, control_penalty= 0, evader_params = np.array([0.1,0.05]), 
-                speed_features=True, is_observability_full = False, **kwargs):
+                speed_features=True, is_observability_full = False, meta_learning = False, **kwargs):
         EzPickle.__init__(self, radius, obstacle_radius,obstacle_loc,
                         ev_speed, n_sensors, sensor_range,action_scale, food_reward, 
                         encounter_reward, control_penalty, evader_params,
-                        speed_features, is_observability_full, **kwargs)
+                        speed_features, is_observability_full, meta_learning, **kwargs)
         self.obstacle_radius = obstacle_radius
         self.obstacle_loc = obstacle_loc
         self.ev_speed = ev_speed
@@ -122,9 +122,11 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, speed_features=True)
         self._pursuers = [self._pursuer]
         self.evader_params = evader_params
-        self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
-        while self.evader_params[0] == 0:
+        self._meta_learning = meta_learning
+        if self._meta_learning:
             self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
+            while self.evader_params[0] == 0:
+                self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
         # print("Evader params : ", self.evader_params[0])
         self.is_observability_full = is_observability_full
         self._evader_move = False
@@ -156,9 +158,10 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         return objx_2
 
     def reset(self):
-        self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
-        while self.evader_params[0] == 0:
+        if self._meta_learning:
             self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
+            while self.evader_params[0] == 0:
+                self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
         # print("Evader params reset : ", self.evader_params[0])
         self._timesteps = 0
         # Initialize obstacles

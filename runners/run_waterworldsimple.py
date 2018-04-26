@@ -18,7 +18,8 @@ ENV_OPTIONS = [
     ('buffer_size', int, 1, ''),
     ('full_observability',bool, False, 'observability'),
     ('evader_param1', float, 0.1, 'evader param1'),
-    ('evader_param2', float, 0.2, 'evader_param2'),
+    ('evader_param2', float, 0.05, 'evader_param2'),
+    ('meta_learning', bool, False, 'whether meta learning or not.')
     ('curriculum', str, None, ''),
 ]
 # yapf: enable
@@ -31,7 +32,8 @@ def main(parser):
         food_reward=args.food_reward, 
         control_penalty=args.control_penalty,
         is_observability_full=args.full_observability,
-        evader_params =[args.evader_param1, args.evader_param2])
+        evader_params =[args.evader_param1, args.evader_param2],
+        meta_learning = args.meta_learning)
     if args.buffer_size > 1:
         env = ObservationBuffer(env, args.buffer_size)
 
