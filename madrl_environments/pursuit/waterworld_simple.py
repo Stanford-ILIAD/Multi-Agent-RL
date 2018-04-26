@@ -122,9 +122,9 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, speed_features=True)
         self._pursuers = [self._pursuer]
         self.evader_params = evader_params
-        self.evader_params[0] = truncnorm.rvs(-2,2)
+        self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
         while self.evader_params[0] == 0:
-            self.evader_params[0] = truncnorm.rvs(-2,2)
+            self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
         # print("Evader params : ", self.evader_params[0])
         self.is_observability_full = is_observability_full
         self._evader_move = False
@@ -156,10 +156,10 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         return objx_2
 
     def reset(self):
-        self.evader_params[0] = truncnorm.rvs(-2,2)
+        self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
         while self.evader_params[0] == 0:
-            self.evader_params[0] = truncnorm.rvs(-2,2)
-        # print("Evader params reset : ", self.evader_params[0])
+            self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
+        print("Evader params reset : ", self.evader_params[0])
         self._timesteps = 0
         # Initialize obstacles
         if self.obstacle_loc is None:
