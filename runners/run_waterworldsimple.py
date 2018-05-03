@@ -19,7 +19,7 @@ ENV_OPTIONS = [
     ('full_observability',bool, False, 'observability'),
     ('evader_param1', float, 0.1, 'evader param1'),
     ('evader_param2', float, 0.05, 'evader_param2'),
-    ('meta_learning', bool, False, 'whether meta learning or not.')
+    ('meta_learning', bool, False, 'whether meta learning or not.'),
     ('curriculum', str, None, ''),
 ]
 # yapf: enable
