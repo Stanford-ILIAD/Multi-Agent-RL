@@ -109,9 +109,8 @@ class RunnerParser(object):
         parser.add_argument('--min_std', type=float, default=1e-6)
         parser.add_argument('--exp_strategy', type=str, default='ou')
         parser.add_argument('--exp_noise', type=float, default=0.3)
-
         parser.add_argument('--step_size', type=float, default=0.01, help='max kl wall limit')
-
+        parser.add_argument('--max_backtracks', type=int, default=15, help="max backtracks in TRPO")
         parser.add_argument('--log_dir', type=str, required=False)
         parser.add_argument('--tabular_log_file', type=str, default='progress.csv',
                             help='Name of the tabular log file (in csv).')
@@ -129,7 +128,6 @@ class RunnerParser(object):
         parser.add_argument(
             '--log_tabular_only', type=ast.literal_eval, default=False,
             help='Whether to only print the tabular log information (in a horizontal format)')
-
         self.update_argument_parser(parser, env_options, **kwargs)
         self.args = parser.parse_known_args(
             [arg for arg in sys.argv[2:] if arg not in ('-h', '--help')])[0]

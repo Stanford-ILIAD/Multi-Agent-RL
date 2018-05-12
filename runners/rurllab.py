@@ -117,7 +117,6 @@ def rllab_envpolicy_parser(env, args):
                                                name='policy_{}'.format(agid))
                             for agid in range(len(env.agents))
                         ]
-                    print(args.policy_hidden)
                     policy = GaussianLSTMPolicy(env_spec=env.spec, feature_network=feature_network,
                                                 hidden_dim=int(args.policy_hidden[0]), name='policy')
                 elif isinstance(env.spec.action_space, Discrete):
@@ -302,6 +301,7 @@ class RLLabRunner(object):
                           max_path_length=self.args.max_path_length, n_itr=self.args.n_iter,
                           discount=self.args.discount, gae_lambda=self.args.gae_lambda,
                           step_size=self.args.step_size, optimizer=ConjugateGradientOptimizer(
+                              max_backtracks=self.args.max_backtracks,
                               hvp_approach=FiniteDifferenceHvp(base_eps=1e-5)) if
                           self.args.recurrent else None, ma_mode=self.args.control)
         elif self.args.algo == 'thddpg':
