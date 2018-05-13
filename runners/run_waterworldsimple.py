@@ -18,7 +18,11 @@ ENV_OPTIONS = [
     ('buffer_size', int, 1, ''),
     ('full_observability',bool, False, 'observability'),
     ('evader_param1', float, 0.1, 'evader param1'),
-    ('evader_param2', float, 0.05, 'evader_param2'),
+    ('evader_param2', float, 0.05, 'evader param2'),
+    ('sensor_range', float, 2, 'sensor range'),
+    ('n_sensors', int, 20, 'number of sensors'),
+    ('control_penalty', float, -0.1, 'control penalty'),
+    ('max_pursuer_velocity', float, 0.05, 'maximum velocity of the pursuer')
     ('meta_learning', bool, False, 'whether meta learning or not.'),
     ('curriculum', str, None, ''),
 ]
@@ -30,7 +34,10 @@ def main(parser):
     print(args.evader_param1)
     env = WaterWorld(radius=args.radius, 
         food_reward=args.food_reward, 
+        sensor_range=args.sensor_range,
+        n_sensors = args.n_sensors,
         control_penalty=args.control_penalty,
+        max_pursuer_velocity = args.max_pursuer_velocity,
         is_observability_full=args.full_observability,
         evader_params =[args.evader_param1, args.evader_param2],
         meta_learning = args.meta_learning)
