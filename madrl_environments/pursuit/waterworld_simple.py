@@ -80,7 +80,7 @@ class Archea(Agent):
         if speed:
             relvel = obj_vel - np.expand_dims(self.velocity, 0)
             sensorvals = self.sensors.dot(relvel.T)
-            sensed_speedfeatures = np.zeros((30,1))
+            sensed_speedfeatures = np.zeros((self.n_sensors,1))
             sensed_speedfeatures[sensedmask] = sensorvals[sensedmask]
             return sensed_distfeatures, sensed_speedfeatures
 
