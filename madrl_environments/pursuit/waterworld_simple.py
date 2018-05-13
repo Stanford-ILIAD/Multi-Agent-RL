@@ -89,11 +89,12 @@ class Archea(Agent):
 class WaterWorld(AbstractMAEnv, EzPickle):
 
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]),
-                ev_speed=0.01, n_sensors = 30, sensor_range=0.5, action_scale=0.01,food_reward=10, 
-                encounter_reward=.05, control_penalty= -0.5, evader_params = np.array([0.1,0.05]), 
-                speed_features=True, is_observability_full = False, max_velocity_pursuer = 0.05, meta_learning = False, **kwargs):
-        EzPickle.__init__(self, radius, obstacle_radius,obstacle_loc,
-                        ev_speed, n_sensors, sensor_range,action_scale, food_reward, 
+                ev_speed=0.01, n_sensors = 30, sensor_range=0.5, action_scale=0.01,
+                food_reward=10, encounter_reward=.05, control_penalty= -0.5, evader_params = np.array([0.1,0.05]), 
+                speed_features=True, is_observability_full = False, max_velocity_pursuer = 0.05, 
+                meta_learning = False, **kwargs):
+        EzPickle.__init__(self, radius, obstacle_radius, obstacle_loc,
+                        ev_speed, n_sensors, sensor_range, action_scale, food_reward, 
                         encounter_reward, control_penalty, evader_params,
                         speed_features, is_observability_full, max_velocity_pursuer, meta_learning, **kwargs)
         self.obstacle_radius = obstacle_radius

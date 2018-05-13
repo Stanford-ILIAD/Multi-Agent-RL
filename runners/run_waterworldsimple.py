@@ -30,16 +30,16 @@ ENV_OPTIONS = [
 def main(parser):
     mode = parser._mode
     args = parser.args
-    print(args.evader_param1)
     env = WaterWorld(radius=args.radius, 
-        food_reward=args.food_reward, 
-        sensor_range=args.sensor_range,
         n_sensors = args.n_sensors,
+        sensor_range=args.sensor_range,
+        food_reward=args.food_reward, 
         control_penalty=args.control_penalty,
-        max_pursuer_velocity = args.max_pursuer_velocity,
-        is_observability_full=args.full_observability,
         evader_params =[args.evader_param1, args.evader_param2],
-        meta_learning = args.meta_learning)
+        is_observability_full=args.full_observability,
+        max_pursuer_velocity = args.max_pursuer_velocity,
+        meta_learning = args.meta_learning,
+        )
     if args.buffer_size > 1:
         env = ObservationBuffer(env, args.buffer_size)
 
