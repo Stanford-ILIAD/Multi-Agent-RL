@@ -337,7 +337,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         done = self.is_terminal
         info = dict(evcatches=int(evcaught), foodcatches=int(food_caught))
         rlist = np.array([reward])
-        print(reward)
+        # print(reward)
         # print(obslist, rlist, done, info)
         # print(rlist,self.control_penalty)
         # print(rlist)
