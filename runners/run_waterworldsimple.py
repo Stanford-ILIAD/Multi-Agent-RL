@@ -22,7 +22,7 @@ ENV_OPTIONS = [
     ('sensor_range', float, 2, 'sensor range'),
     ('n_sensors', int, 20, 'number of sensors'),
     ('control_penalty', float, -0.1, 'control penalty'),
-    ('max_pursuer_velocity', float, 0.05, 'maximum velocity of the pursuer')
+    ('max_pursuer_velocity', float, 0.05, 'maximum velocity of the pursuer'),
     ('meta_learning', bool, False, 'whether meta learning or not.'),
     ('curriculum', str, None, ''),
 ]
