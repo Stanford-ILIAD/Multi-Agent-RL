@@ -314,7 +314,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             food_caught = True
             self._food.set_position(self.np_random.rand(2))
             self._food.set_position(self._respawn(self._food.position, self._food._radius))
-            reward +=  -self.food_reward
+            # reward +=  -self.food_reward
 
 
 
