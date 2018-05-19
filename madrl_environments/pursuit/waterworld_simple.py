@@ -23,7 +23,7 @@ class Archea(Agent):
             self._sensor_obscoord += 1
         self._obscoord_from_sensors = self._n_sensors * self._sensor_obscoord
         self._obs_dim = int(self._obscoord_from_sensors + 1)  #+ 1  #2 for type, 1 for id
-
+        # print(self._obs_dim)
         # Sensors
         angles_K = np.linspace(0., 2. * np.pi, self._n_sensors + 1)[:-1]
         sensor_vecs_K_2 = np.c_[np.cos(angles_K), np.sin(angles_K)]
@@ -89,8 +89,8 @@ class Archea(Agent):
 class WaterWorld(AbstractMAEnv, EzPickle):
 
     def __init__(self, radius=0.015, obstacle_radius=0.2, obstacle_loc=np.array([0.5, 0.5]),
-                ev_speed=0.01, n_sensors = 30, sensor_range=0.5, action_scale=0.01,
-                food_reward=10, encounter_reward=.05, control_penalty= -0.5, evader_params = np.array([0.1,0.05]), 
+                ev_speed=0.01, n_sensors = 20, sensor_range=2, action_scale=0.01,
+                food_reward=10, encounter_reward=.05, control_penalty= -0.1, evader_params = np.array([0.1,0.05]), 
                 speed_features=True, is_observability_full = False, max_velocity_pursuer = 0.05, 
                 meta_learning = False, **kwargs):
         EzPickle.__init__(self, radius, obstacle_radius, obstacle_loc,
@@ -99,7 +99,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
                         speed_features, is_observability_full, max_velocity_pursuer, meta_learning, **kwargs)
         self.obstacle_radius = obstacle_radius
         self.obstacle_loc = obstacle_loc
-        self.ev_speed = ev_speed
+        self.ev_speed = 0.05 * (1-evader_params[0])
         self.n_sensors = n_sensors
         self.sensor_range = np.ones(1) * sensor_range
         self.radius = radius
@@ -192,13 +192,13 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         evfromobst = ssd.euclidean(self._evader.position, self.obstaclesx_No_2)
         evfromfood = ssd.euclidean(self._food.position, self._evader.position)
         foodfromobst = ssd.euclidean(self._food.position, self.obstaclesx_No_2)
-        vel = ((self._food.position - self._evader.position)/(evfromfood+1e-8)) * self.action_scale
+        vel = ((self._food.position - self._evader.position)/(evfromfood+1e-8)) * self.ev_speed
         
         if evfromobst < self._evader._radius + self.obstacle_radius + self.evader_params[1] and evfromfood > foodfromobst:
             vel = self._evader.velocity
             rel_dis = (self._evader.position - self.obstaclesx_No_2)/evfromobst
-            vel[0] = rel_dis[1]  * self.action_scale
-            vel[1] = -rel_dis[0] * self.action_scale
+            vel[0] = rel_dis[1]  * self.ev_speed
+            vel[1] = -rel_dis[0] * self.ev_speed
 
         rel_pursuer = self._pursuer.position - self._evader.position
         evfrompur = ssd.euclidean(self._pursuer.position, self._evader.position)
@@ -207,7 +207,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
 
         if self._evader_move or final_evfrompur < self.evader_params[0]:
             self._evader_move = True
-            vel = - (rel_pursuer/(evfrompur+1e-8)) * self.action_scale
+            vel = - (rel_pursuer/(evfrompur+1e-8)) * self.ev_speed
         if final_evfrompur > 2 * self.evader_params[0]:
             self._evader_move = False
         return vel
@@ -314,7 +314,9 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             food_caught = True
             self._food.set_position(self.np_random.rand(2))
             self._food.set_position(self._respawn(self._food.position, self._food._radius))
-            # reward +=  -1   
+            reward +=  -self.food_reward
+
+
 
         # Find collisions
         # Evaders
