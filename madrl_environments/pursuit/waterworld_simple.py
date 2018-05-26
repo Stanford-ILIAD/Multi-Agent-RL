@@ -9,7 +9,7 @@ from rltools.util import EzPickle
 
 class Archea(Agent):
 
-    def __init__(self, idx, radius, _n_sensors, sensor_range, speed_features=True):
+    def __init__(self, idx, radius, _n_sensors, sensor_range, is_observability_full, speed_features=True):
         self._idx = idx
         self._radius = radius
         # Number of observation coordinates from each sensor
@@ -22,7 +22,10 @@ class Archea(Agent):
         if speed_features:
             self._sensor_obscoord += 1
         self._obscoord_from_sensors = self._n_sensors * self._sensor_obscoord
-        self._obs_dim = int(self._obscoord_from_sensors + 1)  #+ 1  #2 for type, 1 for id
+        if is_observability_full :
+            self._obs_dim = 16
+        else:
+            self._obs_dim = int(self._obscoord_from_sensors + 1)  #+ 1  #2 for type, 1 for id
         # print(self._obs_dim)
         # Sensors
         angles_K = np.linspace(0., 2. * np.pi, self._n_sensors + 1)[:-1]
@@ -110,9 +113,9 @@ class WaterWorld(AbstractMAEnv, EzPickle):
         self.n_obstacles = 1
         self._speed_features = speed_features
         self.seed()
-        self._pursuer = Archea(1, self.radius, self.n_sensors, self.sensor_range, speed_features=True) 
-        self._evader  = Archea(1, self.radius, self.n_sensors, self.sensor_range,speed_features=True)
-        self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, speed_features=True)
+        self._pursuer = Archea(1, self.radius, self.n_sensors, self.sensor_range, is_observability_full, speed_features=True) 
+        self._evader  = Archea(1, self.radius, self.n_sensors, self.sensor_range, is_observability_full, speed_features=True)
+        self._food  = Archea(1, self.radius * 0.75, self.n_sensors, self.sensor_range, is_observability_full, speed_features=True)
         self._pursuers = [self._pursuer]
         self.evader_params = evader_params
         self._meta_learning = meta_learning
