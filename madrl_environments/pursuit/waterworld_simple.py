@@ -156,9 +156,9 @@ class WaterWorld(AbstractMAEnv, EzPickle):
     def reset(self):
         if self._meta_learning:
             # self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
-            self.evader_params[0] = np.random.uniform(0.1, 0.6)
-            while self.evader_params[0] == 0:
-                self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
+            self.evader_params[0] = np.random.uniform(0.05, 0.65)
+            # while self.evader_params[0] == 0:
+            #     self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
             self.ev_speed = 0.05 * (1-self.evader_params[0])
         
         self._timesteps = 0
