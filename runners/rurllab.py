@@ -342,17 +342,21 @@ class RLLabRunner(object):
         # But when do we say, that we fail?
         if self.args.resume_from is not None:
             import joblib
-            with tf.Session() as sess:
-                data = joblib.load(self.args.resume_from)
-                if 'algo' in data.keys():
-                    algo = data['algo']
-                    env = algo.env
-                    policy = algo.policy_or_policies
-                elif 'policy' in data.keys():
-                    policy = data['policy']
-                    env = data['env']
-                    idx = data['itr']
+            sess = tf.Session()
+            sess.__enter__()
+            data = joblib.load(self.args.resume_from)
+            if 'algo' in data.keys():
+                algo = data['algo']
+                env = algo.env
+                policy = algo.policy_or_policies
+            elif 'policy' in data.keys():
+                policy = data['policy']
+                env = data['env']
+                env._wrapped_env.env._meta_learning = False
+                env._wrapped_env.env.evader_params[0] = self.args.evader_param1
+                idx = data['itr']
         else:
+            sess = None
             env, policy = rllab_envpolicy_parser(self.env, self.args)
             idx = 0
         algo = self.setup(env, policy, start_itr=idx)
@@ -360,4 +364,6 @@ class RLLabRunner(object):
         if curriculum:
             algo.curriculum_train(curriculum)
         else:
-            algo.train()
+            algo.train(sess)
+        if sess is not None: 
+          sess.close()

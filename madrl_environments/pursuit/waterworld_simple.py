@@ -160,7 +160,7 @@ class WaterWorld(AbstractMAEnv, EzPickle):
             # while self.evader_params[0] == 0:
             #     self.evader_params[0] = truncnorm.rvs(-2,2,loc=0.5, scale=0.25)
             self.ev_speed = 0.05 * (1-self.evader_params[0])
-        
+        # print(self.evader_params[0], self.evader_params[1], self._meta_learning)
         self._timesteps = 0
         # Initialize obstacles
         if self.obstacle_loc is None:
@@ -361,15 +361,15 @@ class WaterWorld(AbstractMAEnv, EzPickle):
                    tuple((self.obstaclesx_No_2 * screen_size).astype(int)),
                    int(self.obstacle_radius * screen_size), color, -1, lineType=cv2.LINE_AA)
         
-        for k in range(self._pursuer._n_sensors):
-            color = (0, 0, 0)
-            cv2.line(img,
+        if not self.is_observability_full:
+            for k in range(self._pursuer._n_sensors):
+                color = (0, 0, 0)
+                cv2.line(img,
                      tuple((self._pursuer.position * screen_size).astype(int)),
                      tuple(((self._pursuer.position + self._pursuer._sensor_range * self._pursuer.sensors[k]) *
                             screen_size).astype(int)), color, 1, lineType=cv2.LINE_AA)
-            cv2.circle(img,
-                       tuple((self._pursuer.position * screen_size).astype(int)),
-                       int(self._pursuer._radius * screen_size), (255, 0, 0), -1, lineType=cv2.LINE_AA)
+        cv2.circle(img,tuple((self._pursuer.position * screen_size).astype(int)),
+                    int(self._pursuer._radius * screen_size), (255, 0, 0), -1, lineType=cv2.LINE_AA)
         # # Pursuer
         # cv2.circle(img,
         #           tuple((self._pursuer.position * screen_size).astype(int)),
